@@ -2,36 +2,35 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "alexaa123/student-app:latest"
-        APP_SERVER = "3.87.76.80"
+        DOCKER_IMAGE = "alexaa123/student-app:latest"
+        APP_SERVER_IP = "3.87.76.80"
     }
 
     stages {
 
         stage('Clone Repo') {
             steps {
-                git branch: 'Main',
-                    url: 'https://github.com/Pritam280/student-app.git'
+                git branch: 'Main', url: 'https://github.com/Pritam280/student-app.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $alexaa123/student-app:latest .'
+                sh 'docker build -t $DOCKER_IMAGE .'
             }
         }
 
         stage('Login to DockerHub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'echo $PASS | docker login -u $USER --password-stdin'
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
 
         stage('Push Image') {
             steps {
-                sh 'docker push $alexaa123/student-app:latest'
+                sh 'docker push $DOCKER_IMAGE'
             }
         }
 
@@ -39,12 +38,12 @@ pipeline {
             steps {
                 sshagent(['app-server-key']) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no ec2-user@$APP_SERVER << EOF
-                    docker pull $alexaa123/student-app:latest
-                    docker stop app || true
-                    docker rm app || true
-                    docker run -d --name app -p 5000:5000 $alexaa123/student-app:latest
-                    EOF
+                    ssh -o StrictHostKeyChecking=no ec2-user@$APP_SERVER_IP '
+                      docker pull $DOCKER_IMAGE
+                      docker stop student-app || true
+                      docker rm student-app || true
+                      docker run -d -p 5000:5000 --name student-app $DOCKER_IMAGE
+                    '
                     """
                 }
             }
