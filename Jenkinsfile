@@ -10,7 +10,7 @@ pipeline {
 
         stage('Clone Repo') {
             steps {
-                git branch: 'main',
+                git branch: 'Main',
                     url: 'https://github.com/Pritam280/student-app.git'
             }
         }
