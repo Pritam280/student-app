@@ -1,0 +1,41 @@
+name: Student App CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - Main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Checkout code
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. Login to DockerHub
+    - name: Login to DockerHub
+      run: echo "${{ secrets.DOCKER_PASS }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+
+    # 3. Build Docker image
+    - name: Build Docker image
+      run: docker build -t alexaa123/student-app:latest .
+
+    # 4. Push Docker image
+    - name: Push Docker image
+      run: docker push alexaa123/student-app:latest
+
+    # 5. Deploy to App Server (EC2)
+    - name: Deploy to App Server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.APP_SERVER_IP }}
+        username: ec2-user
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          docker pull alexaa123/student-app:latest
+          docker stop student-app || true
+          docker rm student-app || true
+          docker run -d -p 5000:5000 --name student-app alexaa123/student-app:latest
